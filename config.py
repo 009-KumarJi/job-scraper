@@ -32,12 +32,14 @@ LLM_MODEL = "gemini"
 # --- Search Configuration ---
 LINKEDIN_SEARCH_QUERIES = [
     "SDE 1",
-    "Associate Software Engineer",
     "Software Engineer",
+    "Backend Engineer",
     "Backend Developer",
-    "Full Stack Developer",
-    "Node.js Developer",
-    "MERN Developer"
+    "Python Developer",
+    "Machine Learning Engineer",
+    "AI Engineer",
+    "Generative AI Engineer",
+    "Applied AI Engineer"
 ]
 
 LINKEDIN_LOCATION = "Bengaluru, Karnataka, India"
@@ -50,9 +52,13 @@ LINKEDIN_F_WT = 3
 CAREERS_FUTURE_SEARCH_QUERIES = [
     "Software Engineer",
     "Backend Developer",
-    "Full Stack Developer",
+    "Backend Engineer",
     "Application Developer",
-    "Associate Software Engineer"
+    "Associate Software Engineer",
+    "Python Developer",
+    "Machine Learning Engineer",
+    "AI Engineer",
+    "Generative AI Engineer"
 ]
 
 CAREERS_FUTURE_SEARCH_CATEGORIES = ["Information Technology"]
@@ -66,6 +72,90 @@ MAX_JOBS_PER_SEARCH = {
     "linkedin": 2,
     "careers_future": 10,
 }
+
+# --- Targeting Filters ---
+FILTER_FOR_JUNIOR_ROLES = True
+FILTER_FOR_STARTUP_SIGNALS = True
+FILTER_OUT_LARGE_COMPANIES = True
+
+JUNIOR_ROLE_KEYWORDS = [
+    "sde 1",
+    "associate",
+    "junior",
+    "entry level",
+    "fresher",
+    "graduate",
+    "new grad",
+    "apprentice",
+    "0-2 years",
+    "0 to 2 years",
+    "1 year",
+    "2 years",
+]
+
+SENIOR_ROLE_KEYWORDS = [
+    "senior",
+    "staff",
+    "principal",
+    "lead",
+    "manager",
+    "director",
+    "architect",
+    "head of",
+    "vp",
+    "vice president",
+    "7+ years",
+    "8+ years",
+    "10+ years",
+]
+
+STARTUP_SIGNAL_KEYWORDS = [
+    "startup",
+    "early-stage",
+    "early stage",
+    "seed stage",
+    "seed-funded",
+    "series a",
+    "series b",
+    "series c",
+    "founding engineer",
+    "0 to 1",
+    "zero to one",
+    "fast-paced",
+    "fast paced",
+    "small team",
+    "lean team",
+    "build from scratch",
+    "ownership",
+]
+
+LARGE_COMPANY_BLOCKLIST = [
+    "google",
+    "microsoft",
+    "amazon",
+    "meta",
+    "apple",
+    "netflix",
+    "uber",
+    "linkedin",
+    "salesforce",
+    "oracle",
+    "sap",
+    "ibm",
+    "intel",
+    "adobe",
+    "servicenow",
+    "atlassian",
+    "walmart",
+    "deloitte",
+    "accenture",
+    "infosys",
+    "tcs",
+    "wipro",
+    "hcl",
+    "cognizant",
+    "capgemini",
+]
 
 # =================================================================
 # 3. ADVANCED SYSTEM SETTINGS (Modify with Caution)

@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 import time 
 import random 
 import logging
+import re
 import config
 import user_agents
 import supabase_utils
@@ -12,6 +13,115 @@ import json
 
 # --- Setup Logging ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+
+def _normalize_text(value: str | None) -> str:
+    return value.strip().lower() if isinstance(value, str) else ""
+
+
+def _contains_any(text: str, keywords: list[str]) -> bool:
+    return any(keyword in text for keyword in keywords)
+
+
+def _extract_min_years_requirement(text: str) -> int | None:
+    patterns = [
+        r'(\d+)\s*\+?\s*(?:-|to)?\s*(\d+)?\s*years',
+        r'(\d+)\s*\+?\s*yrs',
+        r'minimum\s+(\d+)\s+years',
+        r'at\s+least\s+(\d+)\s+years',
+    ]
+
+    for pattern in patterns:
+        match = re.search(pattern, text)
+        if not match:
+            continue
+
+        first_number = match.group(1)
+        second_number = match.group(2) if len(match.groups()) > 1 else None
+
+        if second_number:
+            return int(second_number)
+
+        return int(first_number)
+
+    return None
+
+
+def _passes_company_filters(company: str | None) -> tuple[bool, str | None]:
+    normalized_company = _normalize_text(company)
+
+    if config.FILTER_OUT_LARGE_COMPANIES and normalized_company:
+        if any(blocked in normalized_company for blocked in config.LARGE_COMPANY_BLOCKLIST):
+            return False, f"company '{company}' matched large-company blocklist"
+
+    return True, None
+
+
+def _passes_junior_filters(job_title: str | None, level: str | None, description: str | None) -> tuple[bool, str | None]:
+    combined_text = " ".join(
+        part for part in [
+            _normalize_text(job_title),
+            _normalize_text(level),
+            _normalize_text(description),
+        ] if part
+    )
+
+    if not config.FILTER_FOR_JUNIOR_ROLES:
+        return True, None
+
+    if _contains_any(combined_text, config.SENIOR_ROLE_KEYWORDS):
+        return False, "matched senior-role keywords"
+
+    years_required = _extract_min_years_requirement(combined_text)
+    if years_required is not None and years_required > 2:
+        return False, f"requires more than 2 years experience ({years_required})"
+
+    if _contains_any(combined_text, config.JUNIOR_ROLE_KEYWORDS):
+        return True, None
+
+    if level and _normalize_text(level) in {"entry level", "internship", "associate", "junior"}:
+        return True, None
+
+    return False, "missing junior-role signals"
+
+
+def _passes_startup_filters(job_title: str | None, company: str | None, description: str | None) -> tuple[bool, str | None]:
+    if not config.FILTER_FOR_STARTUP_SIGNALS:
+        return True, None
+
+    combined_text = " ".join(
+        part for part in [
+            _normalize_text(job_title),
+            _normalize_text(company),
+            _normalize_text(description),
+        ] if part
+    )
+
+    if _contains_any(combined_text, config.STARTUP_SIGNAL_KEYWORDS):
+        return True, None
+
+    return False, "missing startup signals"
+
+
+def _job_matches_target_filters(job_details: dict) -> tuple[bool, str | None]:
+    job_title = job_details.get("job_title")
+    company = job_details.get("company")
+    level = job_details.get("level")
+    description = job_details.get("description")
+
+    passes, reason = _passes_company_filters(company)
+    if not passes:
+        return False, reason
+
+    passes, reason = _passes_junior_filters(job_title, level, description)
+    if not passes:
+        return False, reason
+
+    passes, reason = _passes_startup_filters(job_title, company, description)
+    if not passes:
+        return False, reason
+
+    return True, None
 
 # Convert HTML description to Markdown
 def convert_html_to_markdown(html: str) -> str | None:
@@ -391,8 +501,12 @@ def process_linkedin_query(search_query: str, location: str, limit: int = None) 
             description = details.get('description')
             if description and description.strip(): 
                 if 'job_id' in details and details['job_id'] is not None:
-                    detailed_new_jobs.append(details)
-                    processed_count += 1
+                    matches_filters, reason = _job_matches_target_filters(details)
+                    if matches_filters:
+                        detailed_new_jobs.append(details)
+                        processed_count += 1
+                    else:
+                        logging.info(f"Skipping LinkedIn job ID {job_id} because it {reason}.")
                 else:
                     
                     logging.warning(f"Fetched details for {job_id} but missing 'job_id' key. Skipping.")
@@ -679,8 +793,12 @@ def process_careers_future_query(search_query: str, limit: int = None) -> list:
             description = details.get('description')
             if description and description.strip(): # Ensure it's not None or an empty/whitespace string
                 if 'job_id' in details and details['job_id'] is not None:
-                    detailed_new_jobs.append(details)
-                    processed_count += 1
+                    matches_filters, reason = _job_matches_target_filters(details)
+                    if matches_filters:
+                        detailed_new_jobs.append(details)
+                        processed_count += 1
+                    else:
+                        logging.info(f"Skipping CareersFuture job ID {job_id} because it {reason}.")
                 else:
                     
                     logging.warning(f"Fetched details for {job_id} but missing 'job_id' key. Skipping.")
