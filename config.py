@@ -32,20 +32,98 @@ LLM_MODEL = "gemini"
 # --- Search Configuration ---
 LINKEDIN_SEARCH_QUERIES = [
     "SDE 1",
-    "Founding Engineer",
-    "Software Engineer Intern",
+    "SDE 1 Backend",
+    "SDE I",
+    "SDEI",
+    "SDE1",
+    "Software Development Engineer I",
+    "Software Developer Engineer I",
+    "Software Engineer I",
+    "Software Developer I",
+    "Junior Software Engineer",
+    "Junior Software Developer",
+    "Entry Level Software Engineer",
+    "Entry Level Software Developer",
+    "Graduate Software Engineer",
+    "Graduate Software Developer",
+    "New Grad Software Engineer",
     "Associate Software Engineer",
+    "Associate Software Developer",
+    "Founding Engineer",
+    "Founding Software Engineer",
+    "Founding Backend Engineer",
+    "Software Engineer Intern",
+    "Backend Engineer Intern",
+    "Machine Learning Intern",
+    "AI Intern",
     "Software Engineer",
+    "Software Developer",
+    "Product Engineer",
+    "Platform Engineer",
+    "Systems Engineer",
+    "Application Developer",
     "Backend Engineer",
     "Backend Developer",
+    "Backend Software Engineer",
+    "Backend Software Developer",
+    "Backend Application Developer",
+    "Junior Backend Engineer",
+    "Junior Backend Developer",
+    "Associate Backend Engineer",
+    "Associate Backend Developer",
+    "Entry Level Backend Engineer",
+    "Entry Level Backend Developer",
     "Software Engineer Backend",
     "Python Developer",
+    "Python Engineer",
+    "Python Backend Developer",
+    "Django Developer",
+    "FastAPI Developer",
+    "Flask Developer",
+    "API Developer",
+    "API Engineer",
+    "Microservices Engineer",
+    "Distributed Systems Engineer",
+    "Cloud Engineer",
+    "DevOps Engineer",
+    "Site Reliability Engineer",
+    "Infrastructure Engineer",
+    "Data Engineer",
+    "Analytics Engineer",
     "AI/ML Engineer",
     "Machine Learning Engineer",
+    "Junior Machine Learning Engineer",
+    "Associate Machine Learning Engineer",
+    "Entry Level Machine Learning Engineer",
+    "Machine Learning Developer",
+    "Applied Machine Learning Engineer",
+    "ML Engineer",
     "AI Engineer",
-    "Generative AI Engineer",
+    "Junior AI Engineer",
+    "Associate AI Engineer",
     "Applied AI Engineer",
-    "LLM Engineer"
+    "Generative AI Engineer",
+    "GenAI Engineer",
+    "Prompt Engineer",
+    "AI Application Engineer",
+    "AI Product Engineer",
+    "RAG Engineer",
+    "LLM Engineer",
+    "LLM Application Engineer",
+    "NLP Engineer",
+    "Computer Vision Engineer",
+    "Node.js Developer",
+    "Node.js Engineer",
+    "Backend Node.js Developer",
+    "Express.js Developer",
+    "Java Developer",
+    "Java Backend Developer",
+    "Spring Boot Developer",
+    "Go Developer",
+    "Golang Developer",
+    "Go Backend Developer",
+    "Rust Developer",
+    "C++ Developer",
 ]
 
 LINKEDIN_LOCATION = "Bengaluru, Karnataka, India"
@@ -76,17 +154,25 @@ SCRAPING_SOURCES = ["linkedin"] # "linkedin", "careers_future"
 JOBS_TO_SCORE_PER_RUN = 5
 JOBS_TO_CUSTOMIZE_PER_RUN = 1
 MAX_JOBS_PER_SEARCH = {
-    "linkedin": 5,
-    "careers_future": 10,
+    "linkedin": 15
 }
 
 # --- Targeting Filters ---
 FILTER_FOR_JUNIOR_ROLES = True
 FILTER_FOR_STARTUP_SIGNALS = False
 FILTER_OUT_LARGE_COMPANIES = True
+FILTER_STRICT_LOCATION = True
 FILTER_FETCH_MULTIPLIER = 5
 MAX_FILTER_CANDIDATES_PER_QUERY = 30
 MIN_TARGET_MATCH_SCORE = 4
+
+STRICT_LOCATION_KEYWORDS = [
+    "bengaluru",
+    "bangalore",
+    "hsr layout",
+    "koramangala",
+    "whitefield",
+]
 
 TARGET_ROLE_KEYWORDS = [
     "backend",
@@ -139,6 +225,16 @@ PREFERRED_ROLE_KEYWORDS = [
 
 PREFERRED_WORKPLACE_KEYWORDS = [
     "remote",
+    "hybrid",
+]
+
+REMOTE_WORKPLACE_KEYWORDS = [
+    "remote",
+    "work from home",
+    "wfh",
+]
+
+HYBRID_WORKPLACE_KEYWORDS = [
     "hybrid",
 ]
 

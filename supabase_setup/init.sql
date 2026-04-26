@@ -69,6 +69,7 @@ CREATE TABLE IF NOT EXISTS "public"."jobs" (
     "level" "text",
     "location" "text",
     "description" "text",
+    "job_link" "text",
     "status" "text" DEFAULT 'new'::"text",
     "is_active" boolean DEFAULT true,
     "application_date" timestamp with time zone,
@@ -109,6 +110,10 @@ COMMENT ON COLUMN "public"."jobs"."location" IS 'Job location';
 
 
 COMMENT ON COLUMN "public"."jobs"."description" IS 'Full job description';
+
+
+
+COMMENT ON COLUMN "public"."jobs"."job_link" IS 'Direct URL to the job posting';
 
 
 
@@ -341,7 +346,7 @@ $$;
 ALTER FUNCTION "public"."get_jobs_for_rescore"("p_limit_val" integer) OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."get_jobs_for_resume_generation_custom_sort"("p_page_number" integer, "p_page_size" integer) RETURNS TABLE("job_id" "text", "company" "text", "job_title" "text", "level" "text", "location" "text", "description" "text", "status" "text", "is_active" boolean, "application_date" timestamp with time zone, "resume_score" smallint, "notes" "text", "scraped_at" timestamp with time zone, "last_checked" timestamp with time zone, "job_state" "text", "resume_score_stage" "text", "is_interested" boolean, "customized_resume_id" "uuid", "provider" "text")
+CREATE OR REPLACE FUNCTION "public"."get_jobs_for_resume_generation_custom_sort"("p_page_number" integer, "p_page_size" integer) RETURNS TABLE("job_id" "text", "company" "text", "job_title" "text", "level" "text", "location" "text", "description" "text", "job_link" "text", "status" "text", "is_active" boolean, "application_date" timestamp with time zone, "resume_score" smallint, "notes" "text", "scraped_at" timestamp with time zone, "last_checked" timestamp with time zone, "job_state" "text", "resume_score_stage" "text", "is_interested" boolean, "customized_resume_id" "uuid", "provider" "text")
     LANGUAGE "plpgsql"
     AS $$
 BEGIN
@@ -353,6 +358,7 @@ BEGIN
         j.level,
         j.location,
         j.description,
+        j.job_link,
         j.status,
         j.is_active,
         j.application_date,
@@ -389,7 +395,7 @@ $$;
 ALTER FUNCTION "public"."get_jobs_for_resume_generation_custom_sort"("p_page_number" integer, "p_page_size" integer) OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."get_top_scored_jobs_custom_sort"("p_page_number" integer, "p_page_size" integer, "p_provider" "text" DEFAULT NULL::"text", "p_min_score" integer DEFAULT 50, "p_max_score" integer DEFAULT 100, "p_is_interested_option" "text" DEFAULT NULL::"text") RETURNS TABLE("job_id" "text", "company" "text", "job_title" "text", "level" "text", "location" "text", "description" "text", "status" "text", "is_active" boolean, "application_date" timestamp with time zone, "resume_score" smallint, "notes" "text", "scraped_at" timestamp with time zone, "last_checked" timestamp with time zone, "job_state" "text", "resume_score_stage" "text", "is_interested" boolean, "customized_resume_id" "uuid", "resume_link" "text", "provider" "text")
+CREATE OR REPLACE FUNCTION "public"."get_top_scored_jobs_custom_sort"("p_page_number" integer, "p_page_size" integer, "p_provider" "text" DEFAULT NULL::"text", "p_min_score" integer DEFAULT 50, "p_max_score" integer DEFAULT 100, "p_is_interested_option" "text" DEFAULT NULL::"text") RETURNS TABLE("job_id" "text", "company" "text", "job_title" "text", "level" "text", "location" "text", "description" "text", "job_link" "text", "status" "text", "is_active" boolean, "application_date" timestamp with time zone, "resume_score" smallint, "notes" "text", "scraped_at" timestamp with time zone, "last_checked" timestamp with time zone, "job_state" "text", "resume_score_stage" "text", "is_interested" boolean, "customized_resume_id" "uuid", "resume_link" "text", "provider" "text")
     LANGUAGE "plpgsql"
     AS $$
 BEGIN
@@ -401,6 +407,7 @@ BEGIN
         j.level,
         j.location,
         j.description,
+        j.job_link,
         j.status,
         j.is_active,
         j.application_date,
@@ -454,7 +461,7 @@ $$;
 ALTER FUNCTION "public"."get_top_scored_jobs_custom_sort"("p_page_number" integer, "p_page_size" integer, "p_provider" "text", "p_min_score" integer, "p_max_score" integer, "p_is_interested_option" "text") OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."get_top_scored_jobs_custom_sort"("p_page_number" integer, "p_page_size" integer, "p_provider" "text" DEFAULT NULL::"text", "p_min_score" integer DEFAULT 50, "p_max_score" integer DEFAULT 100, "p_is_interested_option" "text" DEFAULT NULL::"text", "p_search_query" "text" DEFAULT NULL::"text") RETURNS TABLE("job_id" "text", "company" "text", "job_title" "text", "level" "text", "location" "text", "description" "text", "status" "text", "is_active" boolean, "application_date" timestamp with time zone, "resume_score" smallint, "notes" "text", "scraped_at" timestamp with time zone, "last_checked" timestamp with time zone, "job_state" "text", "resume_score_stage" "text", "is_interested" boolean, "customized_resume_id" "uuid", "resume_link" "text", "provider" "text")
+CREATE OR REPLACE FUNCTION "public"."get_top_scored_jobs_custom_sort"("p_page_number" integer, "p_page_size" integer, "p_provider" "text" DEFAULT NULL::"text", "p_min_score" integer DEFAULT 50, "p_max_score" integer DEFAULT 100, "p_is_interested_option" "text" DEFAULT NULL::"text", "p_search_query" "text" DEFAULT NULL::"text") RETURNS TABLE("job_id" "text", "company" "text", "job_title" "text", "level" "text", "location" "text", "description" "text", "job_link" "text", "status" "text", "is_active" boolean, "application_date" timestamp with time zone, "resume_score" smallint, "notes" "text", "scraped_at" timestamp with time zone, "last_checked" timestamp with time zone, "job_state" "text", "resume_score_stage" "text", "is_interested" boolean, "customized_resume_id" "uuid", "resume_link" "text", "provider" "text")
     LANGUAGE "plpgsql"
     AS $$
 BEGIN
@@ -466,6 +473,7 @@ BEGIN
         j.level,
         j.location,
         j.description,
+        j.job_link,
         j.status,
         j.is_active,
         j.application_date,

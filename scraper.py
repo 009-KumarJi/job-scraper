@@ -61,6 +61,23 @@ def _passes_company_filters(company: str | None) -> tuple[bool, str | None]:
     return True, None
 
 
+def _passes_location_filters(location: str | None) -> tuple[bool, str | None]:
+    if not getattr(config, "FILTER_STRICT_LOCATION", False):
+        return True, None
+
+    normalized_location = _normalize_text(location)
+    if not normalized_location:
+        return False, "is missing a location"
+
+    if _contains_any(normalized_location, config.REMOTE_WORKPLACE_KEYWORDS):
+        return True, None
+
+    if any(keyword in normalized_location for keyword in config.STRICT_LOCATION_KEYWORDS):
+        return True, None
+
+    return False, f"location '{location}' is outside strict Bengaluru targeting"
+
+
 def _passes_junior_filters(job_title: str | None, level: str | None, description: str | None) -> tuple[bool, str | None]:
     combined_text = " ".join(
         part for part in [
@@ -168,9 +185,14 @@ def _job_matches_target_filters(job_details: dict) -> tuple[bool, str | None]:
     job_title = job_details.get("job_title")
     company = job_details.get("company")
     level = job_details.get("level")
+    location = job_details.get("location")
     description = job_details.get("description")
 
     passes, reason = _passes_company_filters(company)
+    if not passes:
+        return False, reason
+
+    passes, reason = _passes_location_filters(location)
     if not passes:
         return False, reason
 
@@ -517,6 +539,7 @@ def _fetch_linkedin_job_details(job_id: str) -> dict | None:
 
         # --- Set Provider ---
         job_details["provider"] = "linkedin"
+        job_details["job_link"] = f"https://www.linkedin.com/jobs/view/{job_id}/"
         
         return job_details
 
@@ -770,6 +793,7 @@ def _fetch_careers_future_job_details(job_id: str) -> dict | None:
             'level': job_data.get('positionLevels', [{'position': 'Not applicable'}])[0].get('position', 'Not applicable'),
             'provider': 'careers_future',
             'description': markdown_description, 
+            'job_link': f"https://www.mycareersfuture.gov.sg/job/{job_data.get('uuid')}",
             'posted_at': job_data.get('metadata', {}).get('createdAt', ''),
         }
 
