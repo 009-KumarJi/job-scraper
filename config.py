@@ -30,14 +30,31 @@ LLM_API_KEY = os.environ.get("LLM_API_KEY") or os.environ.get("GEMINI_API_KEY") 
 LLM_MODEL = "gemini"
 
 # --- Search Configuration ---
-LINKEDIN_SEARCH_QUERIES = ["maths lecturer", "statistics lecturer", "maths teacher", "Maths assistant professor", "Maths professor"]
-LINKEDIN_LOCATION = "Singapore"
-LINKEDIN_GEO_ID = 102454443      # Singapore: 102454443, Dubai: 100205264
-LINKEDIN_JOB_TYPE = "F" # F=Full-time, C=Contract, P=Part-time, T=Temporary, I=Internship
-LINKEDIN_JOB_POSTING_DATE = "r86400" # r86400=Past 24h, r604800=Past week
-LINKEDIN_F_WT = 1 # 1=Onsite, 2=Remote, 3=Hybrid
+LINKEDIN_SEARCH_QUERIES = [
+    "SDE 1",
+    "Associate Software Engineer",
+    "Software Engineer",
+    "Backend Developer",
+    "Full Stack Developer",
+    "Node.js Developer",
+    "MERN Developer"
+]
 
-CAREERS_FUTURE_SEARCH_QUERIES = ["IT Support", "Full Stack Web Developer", "Application Support", "Cybersecurity Analyst", "fresher developer"]
+LINKEDIN_LOCATION = "Bengaluru, Karnataka, India"
+LINKEDIN_GEO_ID = 102713980
+
+LINKEDIN_JOB_TYPE = "F"
+LINKEDIN_JOB_POSTING_DATE = "r86400"
+LINKEDIN_F_WT = 3
+
+CAREERS_FUTURE_SEARCH_QUERIES = [
+    "Software Engineer",
+    "Backend Developer",
+    "Full Stack Developer",
+    "Application Developer",
+    "Associate Software Engineer"
+]
+
 CAREERS_FUTURE_SEARCH_CATEGORIES = ["Information Technology"]
 CAREERS_FUTURE_SEARCH_EMPLOYMENT_TYPES = ["Full Time"]
 
