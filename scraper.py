@@ -123,6 +123,15 @@ def _job_matches_target_filters(job_details: dict) -> tuple[bool, str | None]:
 
     return True, None
 
+
+def _get_candidate_fetch_limit(total_candidates: int, target_matches: int | None) -> int:
+    if target_matches is None:
+        return total_candidates
+
+    multiplier = max(1, getattr(config, "FILTER_FETCH_MULTIPLIER", 1))
+    hard_cap = max(target_matches, getattr(config, "MAX_FILTER_CANDIDATES_PER_QUERY", target_matches))
+    return min(total_candidates, max(target_matches, min(hard_cap, target_matches * multiplier)))
+
 # Convert HTML description to Markdown
 def convert_html_to_markdown(html: str) -> str | None:
     """
@@ -485,9 +494,12 @@ def process_linkedin_query(search_query: str, location: str, limit: int = None) 
         logging.info("No new job IDs to process after filtering.")
         return []
 
-    if limit is not None and len(new_job_ids_to_process) > limit:
-        logging.info(f"Truncating new_job_ids_to_process from {len(new_job_ids_to_process)} to {limit} to stay within source limit.")
-        new_job_ids_to_process = new_job_ids_to_process[:limit]
+    candidate_fetch_limit = _get_candidate_fetch_limit(len(new_job_ids_to_process), limit)
+    if candidate_fetch_limit < len(new_job_ids_to_process):
+        logging.info(
+            f"Sampling {candidate_fetch_limit} candidate LinkedIn jobs to find up to {limit} filtered matches."
+        )
+        new_job_ids_to_process = new_job_ids_to_process[:candidate_fetch_limit]
 
     logging.info(f"\n--- Starting Phase 2: Fetching Job Details for {len(new_job_ids_to_process)} New IDs ---")
     detailed_new_jobs = []
@@ -505,6 +517,9 @@ def process_linkedin_query(search_query: str, location: str, limit: int = None) 
                     if matches_filters:
                         detailed_new_jobs.append(details)
                         processed_count += 1
+                        if limit is not None and processed_count >= limit:
+                            logging.info(f"Reached LinkedIn filtered job target of {limit}.")
+                            break
                     else:
                         logging.info(f"Skipping LinkedIn job ID {job_id} because it {reason}.")
                 else:
@@ -778,9 +793,12 @@ def process_careers_future_query(search_query: str, limit: int = None) -> list:
         new_job_ids_to_process.append(job_uuid) 
 
     # 4. Fetch details ONLY for the genuinely new job IDs
-    if limit is not None and len(new_job_ids_to_process) > limit:
-        logging.info(f"Truncating new_job_ids_to_process from {len(new_job_ids_to_process)} to {limit} to stay within source limit.")
-        new_job_ids_to_process = new_job_ids_to_process[:limit]
+    candidate_fetch_limit = _get_candidate_fetch_limit(len(new_job_ids_to_process), limit)
+    if candidate_fetch_limit < len(new_job_ids_to_process):
+        logging.info(
+            f"Sampling {candidate_fetch_limit} candidate CareersFuture jobs to find up to {limit} filtered matches."
+        )
+        new_job_ids_to_process = new_job_ids_to_process[:candidate_fetch_limit]
 
     print(f"\n--- Phase 4: Fetching Job Details for {len(new_job_ids_to_process)} New Jobs ---")
     detailed_new_jobs = []
@@ -797,6 +815,9 @@ def process_careers_future_query(search_query: str, limit: int = None) -> list:
                     if matches_filters:
                         detailed_new_jobs.append(details)
                         processed_count += 1
+                        if limit is not None and processed_count >= limit:
+                            logging.info(f"Reached CareersFuture filtered job target of {limit}.")
+                            break
                     else:
                         logging.info(f"Skipping CareersFuture job ID {job_id} because it {reason}.")
                 else:

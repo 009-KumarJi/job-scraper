@@ -69,14 +69,16 @@ SCRAPING_SOURCES = ["linkedin"] # "linkedin", "careers_future"
 JOBS_TO_SCORE_PER_RUN = 5
 JOBS_TO_CUSTOMIZE_PER_RUN = 1
 MAX_JOBS_PER_SEARCH = {
-    "linkedin": 2,
+    "linkedin": 3,
     "careers_future": 10,
 }
 
 # --- Targeting Filters ---
 FILTER_FOR_JUNIOR_ROLES = True
-FILTER_FOR_STARTUP_SIGNALS = True
+FILTER_FOR_STARTUP_SIGNALS = False
 FILTER_OUT_LARGE_COMPANIES = True
+FILTER_FETCH_MULTIPLIER = 5
+MAX_FILTER_CANDIDATES_PER_QUERY = 15
 
 JUNIOR_ROLE_KEYWORDS = [
     "sde 1",
