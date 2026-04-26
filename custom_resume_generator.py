@@ -439,8 +439,8 @@ async def process_job(job_details: Dict[str, Any], base_resume_details: Resume):
 
         # 4. Update Job Record in Supabase
         logging.info(f"Updating job record for job_id: {job_id} with resume path.")
-        # Optionally set a new status like "resume_generated" or "ready_to_apply"
-        update_success = supabase_utils.update_job_with_resume_link(job_id, customized_resume_id, new_status="resume_generated")
+        # Keep status unchanged so downstream re-scoring queries can still pick this job up.
+        update_success = supabase_utils.update_job_with_resume_link(job_id, customized_resume_id)
 
         if update_success:
             logging.info(f"Successfully updated job record for job_id: {job_id}")

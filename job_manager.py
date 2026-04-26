@@ -40,7 +40,7 @@ async def _check_single_linkedin_job_active(job_id: str, client: httpx.AsyncClie
         try:
             sleep_time = random.uniform(5.0, 15.0)
             logging.info(f"Waiting for {sleep_time:.2f} seconds before next request...")
-            time.sleep(sleep_time)
+            await asyncio.sleep(sleep_time)
 
             # Rotate user agent and proxy for each attempt
             user_agent = random.choice(user_agents.USER_AGENTS)

@@ -1,6 +1,7 @@
 import time
 import json
 import logging
+import re
 from typing import List, Optional, Dict, Any
 import requests
 import io
@@ -143,8 +144,12 @@ def get_resume_score_from_ai(resume_text: str, job_details: Dict[str, Any]) -> O
             prompt=prompt,
         )
 
-        # Attempt to parse the score
-        score = int(score_text.strip())
+        # Attempt to parse the first integer-like score from the model response.
+        score_match = re.search(r"\b(100|[1-9]?\d)\b", score_text)
+        if not score_match:
+            raise ValueError(f"No integer score found in response: {score_text!r}")
+
+        score = int(score_match.group(1))
         if 0 <= score <= 100:
             logging.info(f"Received score {score} for job_id: {job_details.get('job_id')}")
             return score

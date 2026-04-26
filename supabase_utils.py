@@ -12,6 +12,24 @@ if not config.SUPABASE_URL or not config.SUPABASE_SERVICE_ROLE_KEY:
 
 supabase: Client = create_client(config.SUPABASE_URL, config.SUPABASE_SERVICE_ROLE_KEY)
 
+
+def _response_row_count(response: Any) -> int:
+    """Best-effort row count extraction across supabase-py response shapes."""
+    if response is None:
+        return 0
+
+    data = getattr(response, "data", None)
+    if isinstance(data, list):
+        return len(data)
+    if data:
+        return 1
+
+    count = getattr(response, "count", None)
+    if isinstance(count, int):
+        return count
+
+    return 0
+
 # --- Supabase Functions ---
 def get_existing_jobs_from_supabase(batch_size: int = 1000) -> tuple[set, set]:
     """
@@ -53,10 +71,12 @@ def get_existing_jobs_from_supabase(batch_size: int = 1000) -> tuple[set, set]:
 
             offset += batch_size
 
-        print(f"Fetched {len(existing_ids)} job IDs and {len(existing_company_title_keys)} company-title pairs.")
+        logging.info(
+            f"Fetched {len(existing_ids)} job IDs and {len(existing_company_title_keys)} company-title pairs."
+        )
 
     except Exception as e:
-        print(f"Error fetching existing jobs from Supabase: {e}")
+        logging.error(f"Error fetching existing jobs from Supabase: {e}")
 
     return existing_ids, existing_company_title_keys
 
@@ -66,7 +86,7 @@ def save_jobs_to_supabase(jobs_data: list):
     This avoids duplicate key errors by updating existing records based on job_id.
     """
     if not jobs_data:
-        print("No job data provided to save/update.")
+        logging.info("No job data provided to save/update.")
         return
 
     # Ensure job_id is present and potentially convert to the correct type if needed
@@ -81,17 +101,19 @@ def save_jobs_to_supabase(jobs_data: list):
              # except (ValueError, TypeError):
              #     print(f"Warning: Invalid job_id format found: {job.get('job_id')}. Skipping.")
              # Since it's text, just ensure it's a string (it likely already is)
-             job['job_id'] = str(job['job_id'])
-             processed_jobs_data.append(job)
+             normalized_job = job.copy()
+             normalized_job['job_id'] = str(job['job_id'])
+             normalized_job.pop("target_fit_score", None)
+             processed_jobs_data.append(normalized_job)
         else:
-            print(f"Warning: Job data missing job_id. Skipping: {job}")
+            logging.warning(f"Job data missing job_id. Skipping: {job}")
 
 
     if not processed_jobs_data:
-        print("No valid job data remaining after processing.")
+        logging.info("No valid job data remaining after processing.")
         return
 
-    print(f"Attempting to upsert {len(processed_jobs_data)} jobs to Supabase...")
+    logging.info(f"Attempting to upsert {len(processed_jobs_data)} jobs to Supabase...")
 
     try:
         # Use table name from config
@@ -99,22 +121,22 @@ def save_jobs_to_supabase(jobs_data: list):
         # or update existing rows if a job_id conflict occurs based on the primary key.
         # Ensure 'job_id' is the primary key or has a unique constraint in your Supabase table.
         # By default, supabase-py's upsert updates the row on conflict.
-        data, count = supabase.table(config.SUPABASE_TABLE_NAME).upsert(processed_jobs_data).execute()
+        response = supabase.table(config.SUPABASE_TABLE_NAME).upsert(processed_jobs_data).execute()
+        affected_rows = _response_row_count(response)
 
-        # Check the actual response structure from your Supabase client version for upsert
-        # It might differ slightly from insert's response structure
-        if data and isinstance(data, tuple) and len(data) > 1:
-             # The actual data returned might be in data[1] for upsert
-             actual_data = data[1]
-             print(f"Successfully upserted/updated {len(processed_jobs_data)} jobs. Supabase response count: {count}")
-             # You might want to log the actual response data for debugging:
-             # print(f"Supabase response data: {actual_data}")
+        if affected_rows > 0:
+            logging.info(
+                f"Successfully upserted/updated {affected_rows} jobs "
+                f"(attempted {len(processed_jobs_data)})."
+            )
         else:
-             # Log raw response if structure is unexpected or for debugging
-             print(f"Attempted to upsert {len(processed_jobs_data)} jobs. Supabase response: {data}")
+            logging.warning(
+                f"Upsert executed for {len(processed_jobs_data)} jobs, but no affected-row count "
+                f"was returned. Response: {response}"
+            )
 
     except Exception as e:
-        print(f"Error upserting data to Supabase: {e}")
+        logging.error(f"Error upserting data to Supabase: {e}")
         # Consider logging the data that failed to upsert for debugging
         # print(f"Failed data: {processed_jobs_data}")
 
@@ -376,15 +398,15 @@ def upload_customized_resume_to_storage(file_content: bytes, destination_path: s
         #     logging.warning(f"Could not clean up potentially failed upload at {destination_path}")
         return None
 
-def update_job_with_resume_link(job_id: str, customized_resume_id: str,  new_status: Optional[str] = "resume_generated") -> bool:
+def update_job_with_resume_link(job_id: str, customized_resume_id: str,  new_status: Optional[str] = None) -> bool:
     """
     Updates the job record in the Supabase table with the resume link and optionally a new status.
 
     Args:
         job_id: The unique ID of the job to update.
         customized_resume_id: The id the generated resume in Supabase customized_resumes table.
-        new_status: The status to set for the job after processing (e.g., 'resume_generated').
-                    Set to None to only update the link without changing status.
+        new_status: Optional application workflow status to set on the job.
+                    Leave as None to avoid disrupting downstream queries that expect status='new'.
 
     Returns:
         True if the update was successful, False otherwise.
@@ -395,8 +417,8 @@ def update_job_with_resume_link(job_id: str, customized_resume_id: str,  new_sta
 
     try:
         update_data = {"customized_resume_id": customized_resume_id}
-        # if new_status:
-        #     update_data["job_state"] = new_status # Assuming 'status' is your column name
+        if new_status:
+            update_data["status"] = new_status
 
         logging.info(f"Updating job {job_id} with resume link, resume id and status '{new_status or 'unchanged'}'...")
 
@@ -406,7 +428,7 @@ def update_job_with_resume_link(job_id: str, customized_resume_id: str,  new_sta
                            .execute()
 
         # Check if the update affected any rows (response.data might contain updated rows)
-        if response.data:
+        if _response_row_count(response) > 0:
             logging.info(f"Successfully updated job {job_id}.")
             return True
         else:

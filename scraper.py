@@ -23,6 +23,10 @@ def _contains_any(text: str, keywords: list[str]) -> bool:
     return any(keyword in text for keyword in keywords)
 
 
+def _count_keyword_matches(text: str, keywords: list[str]) -> int:
+    return sum(1 for keyword in keywords if keyword in text)
+
+
 def _extract_min_years_requirement(text: str) -> int | None:
     patterns = [
         r'(\d+)\s*\+?\s*(?:-|to)?\s*(\d+)?\s*years',
@@ -82,7 +86,10 @@ def _passes_junior_filters(job_title: str | None, level: str | None, description
     if level and _normalize_text(level) in {"entry level", "internship", "associate", "junior"}:
         return True, None
 
-    return False, "missing junior-role signals"
+    if _contains_any(combined_text, config.TARGET_ROLE_KEYWORDS):
+        return True, None
+
+    return False, "missing junior or target-role signals"
 
 
 def _passes_startup_filters(job_title: str | None, company: str | None, description: str | None) -> tuple[bool, str | None]:
@@ -103,6 +110,60 @@ def _passes_startup_filters(job_title: str | None, company: str | None, descript
     return False, "missing startup signals"
 
 
+def _passes_role_filters(job_title: str | None, description: str | None) -> tuple[bool, str | None]:
+    combined_text = " ".join(
+        part for part in [
+            _normalize_text(job_title),
+            _normalize_text(description),
+        ] if part
+    )
+
+    if _contains_any(combined_text, config.EXCLUDED_ROLE_KEYWORDS):
+        return False, "matched excluded-role keywords"
+
+    target_matches = _count_keyword_matches(combined_text, config.TARGET_ROLE_KEYWORDS)
+    if target_matches == 0:
+        return False, "did not match target-role keywords"
+
+    return True, None
+
+
+def _score_job_fit(job_details: dict) -> int:
+    job_title = _normalize_text(job_details.get("job_title"))
+    company = _normalize_text(job_details.get("company"))
+    level = _normalize_text(job_details.get("level"))
+    location = _normalize_text(job_details.get("location"))
+    description = _normalize_text(job_details.get("description"))
+
+    combined_text = " ".join(part for part in [job_title, company, level, location, description] if part)
+    score = 0
+
+    score += _count_keyword_matches(job_title, config.PREFERRED_ROLE_KEYWORDS) * 4
+    score += _count_keyword_matches(job_title, config.TARGET_ROLE_KEYWORDS) * 3
+    score += _count_keyword_matches(description, config.PREFERRED_ROLE_KEYWORDS) * 2
+    score += _count_keyword_matches(description, config.TARGET_ROLE_KEYWORDS)
+    score += _count_keyword_matches(combined_text, config.JUNIOR_ROLE_KEYWORDS) * 2
+    score += _count_keyword_matches(location, config.PREFERRED_WORKPLACE_KEYWORDS)
+    score += _count_keyword_matches(combined_text, config.STARTUP_SIGNAL_KEYWORDS) * 2
+
+    if level in {"entry level", "associate", "internship", "junior"}:
+        score += 3
+
+    years_required = _extract_min_years_requirement(combined_text)
+    if years_required is None:
+        score += 1
+    elif years_required <= 2:
+        score += 3
+
+    if _contains_any(combined_text, config.EXCLUDED_ROLE_KEYWORDS):
+        score -= 10
+
+    if _contains_any(combined_text, config.SENIOR_ROLE_KEYWORDS):
+        score -= 8
+
+    return score
+
+
 def _job_matches_target_filters(job_details: dict) -> tuple[bool, str | None]:
     job_title = job_details.get("job_title")
     company = job_details.get("company")
@@ -113,6 +174,10 @@ def _job_matches_target_filters(job_details: dict) -> tuple[bool, str | None]:
     if not passes:
         return False, reason
 
+    passes, reason = _passes_role_filters(job_title, description)
+    if not passes:
+        return False, reason
+
     passes, reason = _passes_junior_filters(job_title, level, description)
     if not passes:
         return False, reason
@@ -120,6 +185,10 @@ def _job_matches_target_filters(job_details: dict) -> tuple[bool, str | None]:
     passes, reason = _passes_startup_filters(job_title, company, description)
     if not passes:
         return False, reason
+
+    fit_score = _score_job_fit(job_details)
+    if fit_score < getattr(config, "MIN_TARGET_MATCH_SCORE", 0):
+        return False, f"fit score {fit_score} is below minimum target score"
 
     return True, None
 
@@ -503,7 +572,6 @@ def process_linkedin_query(search_query: str, location: str, limit: int = None) 
 
     logging.info(f"\n--- Starting Phase 2: Fetching Job Details for {len(new_job_ids_to_process)} New IDs ---")
     detailed_new_jobs = []
-    processed_count = 0
 
     ids_to_fetch = new_job_ids_to_process
 
@@ -515,11 +583,8 @@ def process_linkedin_query(search_query: str, location: str, limit: int = None) 
                 if 'job_id' in details and details['job_id'] is not None:
                     matches_filters, reason = _job_matches_target_filters(details)
                     if matches_filters:
+                        details["target_fit_score"] = _score_job_fit(details)
                         detailed_new_jobs.append(details)
-                        processed_count += 1
-                        if limit is not None and processed_count >= limit:
-                            logging.info(f"Reached LinkedIn filtered job target of {limit}.")
-                            break
                     else:
                         logging.info(f"Skipping LinkedIn job ID {job_id} because it {reason}.")
                 else:
@@ -533,7 +598,11 @@ def process_linkedin_query(search_query: str, location: str, limit: int = None) 
             logging.warning(f"Skipping job ID {job_id} as detail fetching failed or returned no data.") 
 
 
-    logging.info(f"--- Finished Phase 2: Successfully fetched details for {processed_count} new job(s) ---")
+    detailed_new_jobs.sort(key=lambda job: job.get("target_fit_score", 0), reverse=True)
+    if limit is not None:
+        detailed_new_jobs = detailed_new_jobs[:limit]
+
+    logging.info(f"--- Finished Phase 2: Selected {len(detailed_new_jobs)} LinkedIn job(s) after ranking ---")
     return detailed_new_jobs
 
 def _fetch_careers_future_jobs(search_query: str) -> list:
@@ -802,7 +871,6 @@ def process_careers_future_query(search_query: str, limit: int = None) -> list:
 
     print(f"\n--- Phase 4: Fetching Job Details for {len(new_job_ids_to_process)} New Jobs ---")
     detailed_new_jobs = []
-    processed_count = 0
 
     for job_id in new_job_ids_to_process:
         details = _fetch_careers_future_job_details(job_id)
@@ -813,11 +881,8 @@ def process_careers_future_query(search_query: str, limit: int = None) -> list:
                 if 'job_id' in details and details['job_id'] is not None:
                     matches_filters, reason = _job_matches_target_filters(details)
                     if matches_filters:
+                        details["target_fit_score"] = _score_job_fit(details)
                         detailed_new_jobs.append(details)
-                        processed_count += 1
-                        if limit is not None and processed_count >= limit:
-                            logging.info(f"Reached CareersFuture filtered job target of {limit}.")
-                            break
                     else:
                         logging.info(f"Skipping CareersFuture job ID {job_id} because it {reason}.")
                 else:
@@ -830,9 +895,11 @@ def process_careers_future_query(search_query: str, limit: int = None) -> list:
             
             logging.warning(f"Skipping job ID {job_id} as detail fetching failed or returned no data.") 
 
+    detailed_new_jobs.sort(key=lambda job: job.get("target_fit_score", 0), reverse=True)
+    if limit is not None:
+        detailed_new_jobs = detailed_new_jobs[:limit]
 
-
-    logging.info(f"--- Finished Phase 4: Successfully fetched details for {processed_count} new job(s) ---")
+    logging.info(f"--- Finished Phase 4: Selected {len(detailed_new_jobs)} CareersFuture job(s) after ranking ---")
     return detailed_new_jobs
 
 # --- Main Execution ---

@@ -32,14 +32,20 @@ LLM_MODEL = "gemini"
 # --- Search Configuration ---
 LINKEDIN_SEARCH_QUERIES = [
     "SDE 1",
+    "Founding Engineer",
+    "Software Engineer Intern",
+    "Associate Software Engineer",
     "Software Engineer",
     "Backend Engineer",
     "Backend Developer",
+    "Software Engineer Backend",
     "Python Developer",
+    "AI/ML Engineer",
     "Machine Learning Engineer",
     "AI Engineer",
     "Generative AI Engineer",
-    "Applied AI Engineer"
+    "Applied AI Engineer",
+    "LLM Engineer"
 ]
 
 LINKEDIN_LOCATION = "Bengaluru, Karnataka, India"
@@ -58,18 +64,19 @@ CAREERS_FUTURE_SEARCH_QUERIES = [
     "Python Developer",
     "Machine Learning Engineer",
     "AI Engineer",
-    "Generative AI Engineer"
+    "Generative AI Engineer",
+    "Applied AI Engineer"
 ]
 
 CAREERS_FUTURE_SEARCH_CATEGORIES = ["Information Technology"]
 CAREERS_FUTURE_SEARCH_EMPLOYMENT_TYPES = ["Full Time"]
 
 # --- Processing Limits ---
-SCRAPING_SOURCES = ["linkedin"] # "linkedin", "careers_future"
+SCRAPING_SOURCES = ["linkedin", "careers_future"] # "linkedin", "careers_future"
 JOBS_TO_SCORE_PER_RUN = 5
 JOBS_TO_CUSTOMIZE_PER_RUN = 1
 MAX_JOBS_PER_SEARCH = {
-    "linkedin": 3,
+    "linkedin": 5,
     "careers_future": 10,
 }
 
@@ -78,7 +85,62 @@ FILTER_FOR_JUNIOR_ROLES = True
 FILTER_FOR_STARTUP_SIGNALS = False
 FILTER_OUT_LARGE_COMPANIES = True
 FILTER_FETCH_MULTIPLIER = 5
-MAX_FILTER_CANDIDATES_PER_QUERY = 15
+MAX_FILTER_CANDIDATES_PER_QUERY = 30
+MIN_TARGET_MATCH_SCORE = 4
+
+TARGET_ROLE_KEYWORDS = [
+    "backend",
+    "back end",
+    "python",
+    "software engineer",
+    "software developer",
+    "application developer",
+    "sde",
+    "associate software engineer",
+    "machine learning",
+    "ml engineer",
+    "ai engineer",
+    "applied ai",
+    "generative ai",
+    "genai",
+    "llm",
+    "rag",
+]
+
+EXCLUDED_ROLE_KEYWORDS = [
+    "frontend",
+    "front end",
+    "react developer",
+    "ui developer",
+    "ux developer",
+    "web designer",
+    "graphic designer",
+    "ios developer",
+    "android developer",
+    "flutter developer",
+    "qa engineer",
+    "test engineer",
+    "salesforce developer",
+    "support engineer",
+]
+
+PREFERRED_ROLE_KEYWORDS = [
+    "backend engineer",
+    "backend developer",
+    "python developer",
+    "software engineer backend",
+    "machine learning engineer",
+    "ai engineer",
+    "generative ai engineer",
+    "applied ai engineer",
+    "llm engineer",
+    "founding engineer",
+]
+
+PREFERRED_WORKPLACE_KEYWORDS = [
+    "remote",
+    "hybrid",
+]
 
 JUNIOR_ROLE_KEYWORDS = [
     "sde 1",
@@ -168,7 +230,9 @@ LLM_RETRY_BASE_DELAY = 10
 LLM_DAILY_REQUEST_BUDGET = 0
 LLM_REQUEST_DELAY_SECONDS = 8
 
-LINKEDIN_MAX_START = 1 
+# LinkedIn pagination uses offsets of 0, 10, 20, ...
+# 20 means the scraper can inspect the first 3 result pages.
+LINKEDIN_MAX_START = 20
 REQUEST_TIMEOUT = 30
 MAX_RETRIES = 3
 RETRY_DELAY_SECONDS = 15
