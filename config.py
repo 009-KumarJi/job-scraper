@@ -126,7 +126,7 @@ LINKEDIN_SEARCH_QUERIES = [
     "C++ Developer",
 ]
 
-LINKEDIN_LOCATION = "Bengaluru, Karnataka, India"
+LINKEDIN_LOCATION = "Bengaluru"
 LINKEDIN_GEO_ID = 102713980
 
 LINKEDIN_JOB_TYPE = "F"
@@ -316,6 +316,12 @@ LARGE_COMPANY_BLOCKLIST = [
     "cognizant",
     "capgemini",
 ]
+
+BLACKLISTED_COMPANIES = [
+    "scoutit"
+]
+
+LARGE_COMPANY_BLOCKLIST.extend(BLACKLISTED_COMPANIES)
 
 # =================================================================
 # 3. ADVANCED SYSTEM SETTINGS (Modify with Caution)
